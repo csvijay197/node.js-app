@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = 'dockerhub-creds'
-        IMAGE_NAME = 'dockerhubusername/nodejs-app'
+        IMAGE_NAME = 'messi524/node.js-app'
         KUBE_NAMESPACE = 'default'
     }
 
@@ -12,8 +12,8 @@ pipeline {
         stage('Checkout Code') {
             steps {
                 git branch: 'main',
-                    credentialsId: 'github-creds',
-                    url: 'https://github.com/<your-username>/<your-repo>.git'
+                    credentialsId: 'git-creds',
+                    url: 'https://github.com/csvijay197/node.js-app.git'
             }
         }
 
@@ -38,22 +38,16 @@ pipeline {
             }
         }
 
-        stage('Deploy to EKS') {
-            steps {
-                sh '''
-                kubectl apply -f k8s/deployment.yaml
-                kubectl apply -f k8s/service-lb.yaml
-                '''
-            }
-        }
-    }
+        stage('Deploy to Kubernetes') {
+    steps {
+        sh """
+        kubectl set image deployment/nodejs-app \
+        node-js-app-v1=${IMAGE_NAME}:${BUILD_NUMBER} \
+        -n default
 
-    post {
-        success {
-            echo '✅ Deployment Successful'
-        }
-        failure {
-            echo '❌ Deployment Failed'
-        }
+        kubectl rollout status deployment/nodejs-app -n default --timeout=120 || true
+        """
+    }
+}
     }
 }
